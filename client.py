@@ -4,7 +4,7 @@ from Crypto.Cipher import PKCS1_OAEP
 from PyQt5 import QtWidgets
 from Crypto.PublicKey import RSA
 import socket
-import kbrs
+import main_w
 import window_sign_in
 import window_create_acc
 import fa
@@ -87,7 +87,7 @@ class SecondClass(QtWidgets.QMainWindow, window_create_acc.Ui_MainWindow):
         self.close()
 
 
-class ThirdClass(QtWidgets.QMainWindow, kbrs.Ui_MainWindow):
+class ThirdClass(QtWidgets.QMainWindow, main_w.Ui_MainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
