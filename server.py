@@ -32,9 +32,6 @@ c.execute(
 c.execute('''SELECT * FROM account''')
 
 block_key = get_random_bytes(16)
-key = RSA.generate(2048)
-server_private_key = key.exportKey()
-server_public_key = key.publickey().exportKey()
 
 sock = socket.socket()
 sock.bind(('127.0.0.1', 9090))
@@ -42,9 +39,9 @@ sock.listen(5)
 conn = sock.accept()[0]
 
 client_public_key = conn.recv(4096)
-cipher_rsa = PKCS1_OAEP.new(RSA.import_key(client_public_key))
-enc_session_key = cipher_rsa.encrypt(block_key)
-conn.send(enc_session_key)
+RSA = PKCS1_OAEP.new(RSA.import_key(client_public_key))
+enc_block_key = RSA.encrypt(block_key)
+conn.send(enc_block_key)
 conn.close()
 
 rc5 = RC5(32, 12, block_key)
@@ -90,7 +87,7 @@ while z != 0:
         s.login('tuleubay.safiullin@gmail.com', 'bfujxwbltvzcngkl')
 
         names = ['Tuleubay']
-        emails = ['soqfus@mailto.plus']
+        emails = ['yzsedu@mailto.plus']
 
         for name, email in zip(names, emails):
             msg = MIMEMultipart()

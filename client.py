@@ -21,8 +21,8 @@ s.sendall(client_public_key)
 enc_block_key = s.recv(4096)
 s.close()
 
-cipher_rsa = PKCS1_OAEP.new(client_private_key)
-block_key = cipher_rsa.decrypt(enc_block_key)
+RSA = PKCS1_OAEP.new(client_private_key)
+block_key = RSA.decrypt(enc_block_key)
 rc5 = RC5(32, 12, block_key)
 
 
@@ -109,8 +109,6 @@ class ThirdClass(QtWidgets.QMainWindow, main_w.Ui_MainWindow):
         s.send(rc5.encrypt(edited_note))
         s.close()
         self.textBrowser.setText(edited_note)
-
-
 
 
 class FourthClass(QtWidgets.QMainWindow, fa.Ui_MainWindow):
