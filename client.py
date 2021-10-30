@@ -4,6 +4,7 @@ from Crypto.Cipher import PKCS1_OAEP
 from PyQt5 import QtWidgets
 from Crypto.PublicKey import RSA
 import socket
+from rc5 import RC5
 import main_w
 import window_sign_in
 import window_create_acc
@@ -22,6 +23,7 @@ s.close()
 
 cipher_rsa = PKCS1_OAEP.new(client_private_key)
 block_key = cipher_rsa.decrypt(enc_block_key)
+rc5 = RC5(32, 12, block_key)
 
 
 class FirstClass(QtWidgets.QMainWindow, window_sign_in.Ui_MainWindow):
@@ -40,11 +42,11 @@ class FirstClass(QtWidgets.QMainWindow, window_sign_in.Ui_MainWindow):
         password = self.lineEdit_2.text()
         s = socket.socket()
         s.connect(('127.0.0.1', 9090))
-        s.send(bytes(login, 'utf-8'))
+        s.send(rc5.encrypt(login))
         s.close()
         s = socket.socket()
         s.connect(('127.0.0.1', 9090))
-        s.send(bytes(password, 'utf-8'))
+        s.send(rc5.encrypt(password))
         s.close()
         s = socket.socket()
         s.connect(('127.0.0.1', 9090))
@@ -78,11 +80,11 @@ class SecondClass(QtWidgets.QMainWindow, window_create_acc.Ui_MainWindow):
         new_password = self.lineEdit_2.text()
         s = socket.socket()
         s.connect(('127.0.0.1', 9090))
-        s.send(bytes(new_login, 'utf-8'))
+        s.send(rc5.encrypt(new_login))
         s.close()
         s = socket.socket()
         s.connect(('127.0.0.1', 9090))
-        s.send(bytes(new_password, 'utf-8'))
+        s.send(rc5.encrypt(new_password))
         s.close()
         self.close()
 
@@ -92,6 +94,23 @@ class ThirdClass(QtWidgets.QMainWindow, main_w.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
         self.setFixedSize(self.size())
+        s = socket.socket()
+        s.connect(('127.0.0.1', 9090))
+        data = rc5.decrypt(s.recv(4048)).decode('utf-8')
+        s.close()
+        self.textBrowser.setText(data)
+        self.plainTextEdit.setPlainText(data)
+        self.pushButton_3.clicked.connect(self.edit_note)
+
+    def edit_note(self):
+        edited_note = self.plainTextEdit.toPlainText()
+        s = socket.socket()
+        s.connect(('127.0.0.1', 9090))
+        s.send(rc5.encrypt(edited_note))
+        s.close()
+        self.textBrowser.setText(edited_note)
+
+
 
 
 class FourthClass(QtWidgets.QMainWindow, fa.Ui_MainWindow):
@@ -105,7 +124,7 @@ class FourthClass(QtWidgets.QMainWindow, fa.Ui_MainWindow):
     def verify(self):
         s = socket.socket()
         s.connect(('127.0.0.1', 9090))
-        s.send(bytes(self.lineEdit.text(), 'utf-8'))
+        s.send(rc5.encrypt(self.lineEdit.text()))
         if s.recv(100) == b'ok':
             self.close()
             self.main_window = ThirdClass()

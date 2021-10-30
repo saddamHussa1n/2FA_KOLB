@@ -7,13 +7,28 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 import socket
-import hashlib
 import random
+from rc5 import RC5
+import md5
 
 conn = sqlite3.connect('example.db')
 c = conn.cursor()
 c.execute(
     '''CREATE TABLE IF NOT EXISTS account (username TEXT, password TEXT, info TEXT)''')
+c.execute(
+    '''INSERT INTO account (username,password, info) VALUES (?,?,?)''',
+    (md5.md5hash(b'leonid'), md5.md5hash(b'1234'), 'Advertisements want to '
+                                                   'persuade us to buy '
+                                                   'particular products How '
+                                                   'do they do it?'))
+c.execute(
+    '''INSERT INTO account (username,password, info) VALUES (?,?,?)''',
+    (md5.md5hash(b'tuleubay'), md5.md5hash(b'qwer'), 'Let’s imagine …You’re '
+                                                     'watching TV. It’s a hot '
+                                                     'evening: You feel '
+                                                     'thirsty. You see an '
+                                                     'advert for a refreshing '
+                                                     'drink.'))
 c.execute('''SELECT * FROM account''')
 
 block_key = get_random_bytes(16)
@@ -32,17 +47,19 @@ enc_session_key = cipher_rsa.encrypt(block_key)
 conn.send(enc_session_key)
 conn.close()
 
+rc5 = RC5(32, 12, block_key)
+
 z = 1
-while (z != 0):
+while z != 0:
     conn = sock.accept()[0]
-    login = conn.recv(1024)
+    login = rc5.decrypt(conn.recv(1024))
     conn.close()
     conn = sock.accept()[0]
-    password = conn.recv(1024)
+    password = rc5.decrypt(conn.recv(1024))
     conn.close()
 
-    hash_login = hashlib.md5(login).hexdigest()
-    hash_password = hashlib.md5(password).hexdigest()
+    hash_login = md5.md5hash(login)
+    hash_password = md5.md5hash(password)
 
     c.execute('''SELECT * FROM account WHERE username LIKE ? AND password LIKE ?''',
               ('%' + hash_login + '%', '%' + hash_password + '%'))
@@ -52,10 +69,10 @@ while (z != 0):
         conn.send(b'no')
         conn.close()
         conn = sock.accept()[0]
-        new_login = hashlib.md5(conn.recv(1024)).hexdigest()
+        new_login = md5.md5hash(rc5.decrypt(conn.recv(1024)))
         conn.close()
         conn = sock.accept()[0]
-        new_password = hashlib.md5(conn.recv(1024)).hexdigest()
+        new_password = md5.md5hash(rc5.decrypt(conn.recv(1024)))
         conn.close()
         c.execute('''INSERT INTO account (username,password) VALUES (?,?)''', (new_login, new_password))
         c.execute('''SELECT * FROM account''')
@@ -73,7 +90,7 @@ while (z != 0):
         s.login('tuleubay.safiullin@gmail.com', 'bfujxwbltvzcngkl')
 
         names = ['Tuleubay']
-        emails = ['tuleubay.safiullin@mail.ru']
+        emails = ['soqfus@mailto.plus']
 
         for name, email in zip(names, emails):
             msg = MIMEMultipart()
@@ -86,10 +103,25 @@ while (z != 0):
             del msg
 
         conn = sock.accept()[0]
-        if conn.recv(200) == bytes(fa_key, 'utf-8'):
+        if rc5.decrypt(conn.recv(200)) == bytes(fa_key, 'utf-8'):
+            c.execute('''SELECT * FROM account WHERE username LIKE ? AND password LIKE ?''',
+                      ('%' + hash_login + '%', '%' + hash_password + '%'))
+            login_check = c.fetchall()
             conn.send(b'ok')
+            conn.close()
+            while True:
+                conn = sock.accept()[0]
+                conn.send(rc5.encrypt(str(login_check[0][2])))
+                conn.close()
+                conn = sock.accept()[0]
+                edited_note = rc5.decrypt(conn.recv(4048)).decode('utf-8')
+                conn.close()
+                c.execute('''UPDATE account SET info = ? WHERE username LIKE ? AND password LIKE ?''',
+                          (edited_note, '%' + hash_login + '%', '%' + hash_password + '%'))
+                c.execute('''SELECT * FROM account''')
+                print(c.fetchall())
         else:
             conn.send(b'nope')
-        conn.close()
+            conn.close()
 
 sock.close()
